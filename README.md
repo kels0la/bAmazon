@@ -1,2 +1,2 @@
 # bAmazon
-bAmazon initializing
+bAmazon project
