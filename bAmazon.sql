@@ -4,7 +4,7 @@ CREATE DATABASE bAmazonDB;
 USE bAmazonDB;
 
 CREATE TABLE products(
-  id INT NOT NULL AUTO_INCREMENT,
+  id INT AUTO_INCREMENT NOT NULL,
   productName VARCHAR(30),
   departmentName VARCHAR(30),
   price DECIMAL(10, 2),
