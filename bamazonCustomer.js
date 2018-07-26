@@ -1,24 +1,21 @@
 //Enabling mysql and inquirer
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const cTable = require('console.table');
 
 const connection = mysql.createConnection({
     host: "localhost",
 
-    // Your port; if not 3306
     port: 3306,
 
-    // Your username
     user: "root",
 
-    // Your password
     password: "root",
     database: "bAmazonDB"
 });
 
 connection.connect(function (err) {
     if (err) throw err;
-    // run the startCustomer function after the connection is made to prompt the user
     startCustomer();
 });
 

@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const cTable = require('console.table');
 
 const connection = mysql.createConnection({
     host: "localhost",
@@ -17,10 +18,10 @@ const connection = mysql.createConnection({
 
 connection.connect(function (err) {
     if (err) throw err;
-    // run the start function after the connection is made to prompt the user
+    // run the startManager function after the connection is made to prompt the user
     startManager();
 });
-
+//prompts user to choose an action
 function startManager() {
     inquirer.prompt({
         name: "action",
@@ -30,7 +31,8 @@ function startManager() {
             "View Products for Sale",
             "View Low Inventory",
             "Add to Inventory",
-            "Add New Product"
+            "Add New Product",
+            "Quit"
         ]
     }).then(function (answer) {
         switch (answer.action) {
@@ -49,28 +51,35 @@ function startManager() {
             case "Add New Product":
                 addNewProduct();
                 break;
+
+            case "Quit":
+                connection.end();
+                break;
+            
+            default:
+                connection.end();
+                break;
         }
     });
 };
 function viewProducts() {
-    connection.query("SELECT * FROM products", function (err, res) {
+    connection.query("SELECT id, productName AS Name, departmentName AS Department, price AS Price, stockQuantity as Quantity FROM products", function (err, res) {
         if (err) throw err;
         //displays each item's pertinent statistics
-        for (var i = 0; i < res.length; i++) {
-            console.log("\nID: " + res[i].id + "\nProduct: " + res[i].productName + "\nDepartment: " + res[i].departmentName + "\nPrice: $" + res[i].price + "\nQuantity: " + res[i].stockQuantity)
-        };
         console.log("");
+        console.table(res);
         restartPrompt();
-    })
-
+    });
 }
 function viewLowInventory() {
+    
     connection.query("SELECT productName, stockQuantity FROM products WHERE stockQuantity < 5", function (err, res) {
         if (err) throw err;
         else {
-            res.forEach(entry => console.log(`\n${entry.productName} has ${entry.stockQuantity} unit(s) remaining`));
             console.log('');
+            res.forEach(entry => console.log(`${entry.productName} has ${entry.stockQuantity} unit(s) remaining`));
         }
+        console.log('');
         inquirer.prompt([
             {
                 name: "replenish",
@@ -88,8 +97,10 @@ function viewLowInventory() {
     })
 };
 function addToInventory() {
+    
     let currentQuantity;
     let newQuantity;
+
     connection.query("SELECT * FROM products", function (err, res) {
         if (err) throw err;
         else {
@@ -118,7 +129,7 @@ function addToInventory() {
                         newQuantity = (currentQuantity + parseInt(answer.amount));
                     }
                 };
-
+                //updating the new quantities
                 connection.query("UPDATE products SET ? WHERE ?",
                     [
                         {
@@ -139,48 +150,59 @@ function addToInventory() {
     });
 };
 function addNewProduct() {
-    inquirer.prompt([
-        {
-            name: "product_name",
-            type: "input",
-            message: "What is the name of the product you would like to add?"
-        },
-        {
-            name: "department",
-            type: "input",
-            message: "What department should this product be added to?"
-        },
-        {
-            name: "price",
-            type: "input",
-            message: "What is the price per unit? (no dollar sign necessary)",
-            validate: validateNumber
-        },
-        {
-            name: "quantity",
-            type: "input",
-            message: "What is the inventory quantity for this product?",
-            validate: validateNumber
-        },
-    ]).then(function(answer){
+    //query added to select only departments that currently exist
+    connection.query("SELECT department_name FROM departments", function (err, response){
+        if (err) throw err;
         
-        connection.query("INSERT INTO products SET?",
+        inquirer.prompt([
             {
-                productName: answer.product_name,
-                departmentName: answer.department,
-                price: answer.price,
-                stockQuantity: answer.quantity
+                name: "product_name",
+                type: "input",
+                message: "What is the name of the product you would like to add?"
             },
-            function(err, res) {
-                if (err) throw err;
-            }
-        );
-        console.log("");
-        console.log(`${answer.product_name} has been added to the ${answer.department} department at a price point of $${answer.price}, with ${answer.quantity} in stock\n`);
-        restartPrompt();
+            {
+                name: "department",
+                type: "list",
+                message: "What department should this product be added to?",
+                choices: function () {
+                    //to select the department
+                    let departmentArray = [];
+                    response.forEach(response => departmentArray.push(response.department_name));
+                    return departmentArray;
+                }
+            },
+            {
+                name: "price",
+                type: "input",
+                message: "What is the price per unit? (no dollar sign necessary)",
+                validate: validateNumber
+            },
+            {
+                name: "quantity",
+                type: "input",
+                message: "What is the inventory quantity for this product?",
+                validate: validateNumber
+            },
+        ]).then(function (answer) {
+            //adding values to the database
+            connection.query("INSERT INTO products SET?",
+                {
+                    productName: answer.product_name,
+                    departmentName: answer.department,
+                    price: answer.price,
+                    stockQuantity: answer.quantity
+                },
+                function (err, res) {
+                    if (err) throw err;
+                }
+            );
+            console.log("");
+            console.log(`${answer.product_name} has been added to the ${answer.department} department at a price point of $${answer.price}, with ${answer.quantity} in stock.\n`);
+            restartPrompt();
+        });
     });
 };
-//Function to determine whether to restart the cycle or to close the connection
+//function to determine whether to restart the cycle or to close the connection
 function restartPrompt() {
     inquirer.prompt([
         {
@@ -197,7 +219,8 @@ function restartPrompt() {
         };
     });
 };
-function validateNumber(value){
+//function to only include non-negative numbers
+function validateNumber(value) {
     if (isNaN(value) === true) {
         console.log("\nPlease enter a number");
         return false;
