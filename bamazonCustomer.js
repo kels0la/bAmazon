@@ -1,8 +1,8 @@
 //Enabling mysql and inquirer
-var mysql = require("mysql");
-var inquirer = require("inquirer");
+const mysql = require("mysql");
+const inquirer = require("inquirer");
 
-var connection = mysql.createConnection({
+const connection = mysql.createConnection({
     host: "localhost",
 
     // Your port; if not 3306
@@ -27,9 +27,14 @@ function startCustomer() {
     connection.query("SELECT * FROM products", function (err, res) {
         if (err) throw err;
         //displays each item's pertinent statistics
-        for (var i = 0; i < res.length; i++) {
-            console.log("\nID: " + res[i].id + "\nProduct: " + res[i].productName + "\nPrice: $" + res[i].price + "\nQuantity: " + res[i].stockQuantity)
-        };
+       console.log("------------------------\nItems Available for Sale\n------------------------");
+       for (var i = 0; i < res.length; i++) {
+           console.log(res[i].id +
+               " | " + res[i].productName +
+               " | Price: $" + res[i].price +
+               " | Quantity: " + res[i].stockQuantity);
+       };
+       console.log("---------------------------------------------------------");
         //prompt to select the item for purchase
         inquirer.prompt([
             {
@@ -38,14 +43,17 @@ function startCustomer() {
                 choices: function () {
                     var choiceArray = [];
                     for (var n = 0; n < res.length; n++) {
-                        choiceArray.push(res[n].id.toString());
+                        choiceArray.push(res[n].id.toString() + " " + res[n].productName);
                     }
                     return choiceArray;
                 },
-                message: "What is the ID for the item you would like to purchase?"
+                message: "Which item would you like to purchase?"
             }
         ]).then(function (answer) {
-            var chosenItemID = parseInt(answer.itemID - 1);
+
+            let splitItemID = answer.itemID.split(" ", 1);
+            let chosenItemID = parseInt(splitItemID - 1);
+            
             inquirer.prompt([
                 {
                     name: "numberPurchased",
@@ -57,7 +65,7 @@ function startCustomer() {
                             console.log("\nPlease enter a non-negative value")
                             return false;
                         }
-                        if ((isNaN(value) === false) && (res[chosenItemID].stockQuantity > parseInt(value))) {
+                        if ((isNaN(value) === false) && (res[chosenItemID].stockQuantity >= parseInt(value))) {
                             return true;
                         }
                         console.log("\nQuantity specified not in supply. Please specify a different amount.")
@@ -70,16 +78,18 @@ function startCustomer() {
                     "UPDATE products SET ? WHERE ?",
                     [
                         {
-                            stockQuantity: (res[chosenItemID].stockQuantity - ans.numberPurchased)
+                            stockQuantity: (res[chosenItemID].stockQuantity - ans.numberPurchased),
+                            product_sales: parseFloat(res[chosenItemID].product_sales + ((res[chosenItemID]).price * ans.numberPurchased))
                         },
                         {
+                            id: chosenItemID + 1,
                             id: chosenItemID + 1
                         }
                     ], function (err, res) {
                         if (err) throw err;
                     }
 
-                )
+                );
                 console.log("\nCongratulations. You have purchased " + ans.numberPurchased + " " +
                     res[chosenItemID].productName + "(s) @ $" + res[chosenItemID].price + " for a grand total of: $" +
                     (res[chosenItemID].price * ans.numberPurchased) + "!\n");
@@ -105,5 +115,5 @@ function restartPrompt() {
         } else {
             connection.end();
         }
-    })
+    });
 };

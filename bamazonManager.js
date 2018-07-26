@@ -1,7 +1,7 @@
-var mysql = require("mysql");
-var inquirer = require("inquirer");
+const mysql = require("mysql");
+const inquirer = require("inquirer");
 
-var connection = mysql.createConnection({
+const connection = mysql.createConnection({
     host: "localhost",
 
     // Your port; if not 3306
@@ -51,7 +51,7 @@ function startManager() {
                 break;
         }
     });
-}
+};
 function viewProducts() {
     connection.query("SELECT * FROM products", function (err, res) {
         if (err) throw err;
@@ -163,7 +163,7 @@ function addNewProduct() {
             validate: validateNumber
         },
     ]).then(function(answer){
-        console.log(answer);
+        
         connection.query("INSERT INTO products SET?",
             {
                 productName: answer.product_name,
@@ -174,7 +174,7 @@ function addNewProduct() {
             function(err, res) {
                 if (err) throw err;
             }
-        )
+        );
         console.log("");
         console.log(`${answer.product_name} has been added to the ${answer.department} department at a price point of $${answer.price}, with ${answer.quantity} in stock\n`);
         restartPrompt();
@@ -194,8 +194,8 @@ function restartPrompt() {
             startManager();
         } else {
             connection.end();
-        }
-    })
+        };
+    });
 };
 function validateNumber(value){
     if (isNaN(value) === true) {
